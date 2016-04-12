@@ -1,0 +1,25 @@
+{
+  "name": "npm-shared",
+  "version": "1.0.0",
+  "description": "Make easy to share the node_module folder among projects reusing installed modules.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "npm",
+    "share",
+    "package",
+    "multiple",
+    "reuse"
+  ],
+  "bin": {
+    "npm-shared": "npm-shared.js"
+  },
+  "author": "javi@arqex.com",
+  "license": "MIT",
+  "dependencies": {
+    "shelljs": "^0.6.0",
+    "yargs": "^4.4.0"
+  }
+}
