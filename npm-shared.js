@@ -7,6 +7,7 @@ var Path = require('path');
 
 
 var entry = parseEntry();
+var cwd = process.cwd();
 var node_modules = 'node_modules';
 var package_json = 'package.json';
 var file_flag = Path.join( node_modules, 'npm-shared' );
@@ -15,21 +16,28 @@ if( entry.command === 'init' ){
   initShared();
 }
 else if( entry.command === 'install' ){
-  var path = findSharedPath( __dirname ),
-    sharedPath = findSharedPath( __dirname ),
-    packageJson = sharedPath && fs.readFileSync( Path.join( sharedPath, package_json ) )
+  var path = findSharedPath( cwd ),
+    projectPath = findProjectPath( cwd ),
+    packageJson = projectPath && fs.readFileSync( Path.join( projectPath, package_json ) )
   ;
 
   if( !entry.args.length ){
+    if( !packageJson ){
+      abort('No module name given to install and there is not a package.json file to install modules');
+    }
 
+    safeCopy( Path.join( projectPath, package_json ), Path.join( path, package_json ) );
+
+    shell.exec('npm install', {cwd: path}, function(){
+      fs.unlink( Path.join( path, package_json ) );
+      console.log('Everything worked ok.');
+    });
   }
-
-  console.log( path, packageJson );
 }
 else {
   console.log( entry );
   shell.exec('npm -v');
-  findSharedPath( __dirname );
+  findSharedPath( cwd );
 }
 
 function initShared(){
@@ -54,7 +62,7 @@ function initShared(){
 function findSharedPath( origin ){
   console.log( origin );
   if( fs.existsSync( Path.join( origin, file_flag ))){
-    return Path.join( origin, node_modules );
+    return origin;
   }
   else {
     var nextPath = Path.join( origin, '..' );
@@ -62,8 +70,7 @@ function findSharedPath( origin ){
       return findSharedPath( nextPath );
     }
     else {
-      console.error("ERR: Couldn't find any npm shared folder initialized.");
-      process.exit(1);
+      abort("Couldn't find any npm shared folder initialized.");
     }
   }
 }
@@ -75,7 +82,7 @@ function findProjectPath( origin ){
   else {
     var nextPath = Path.join( origin, '..' );
     if( nextPath !== origin ){
-      return findPackageJson( nextPath );
+      return findProjectPath( nextPath );
     }
     else {
       return false;
@@ -120,4 +127,16 @@ function parseModifier( entry, name, cliNames ){
       entry.args.push( arg );
     }
   }
+}
+
+function safeCopy( from, to ){
+  if( fs.existsSync( to ) ){
+    fs.unlinkSync( to );
+  }
+  fs.writeFileSync( to, fs.readFileSync( from ) );
+}
+
+function abort( reason ){
+  console.error( 'ERR: ' + reason );
+  process.exit(1);
 }

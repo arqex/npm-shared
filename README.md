@@ -9,7 +9,7 @@ It is so alpha that it may not work at all.
 
 When you have several projects on your machine you are probably using the same npm packages once and again, and probably you have those modules repeated in the `node_modules` of every project. Couldn't we reuse the packages?
 
-The way that node.js works requiring modules make easy to share them among projects. When you require some module absolutely using `var My = require('my')`, node looks for that module in `node_modules` folder of the current dir.
+The way that node.js requires modules make easy to share them among projects. When you require some module absolutely using `var My = require('my')`, node looks for that module in `node_modules` folder of the current dir.
 
 If the module can't be found, it goes to the parent dir and looks for it in its `node_modules` folder. This process is repeated until the module is found or it reaches the root directory.
 
@@ -29,7 +29,7 @@ npm install -g npm-shared
 Imagine we have this folder structure in your machine
 ```
 + \
-| - npmProjects
+| + npmProjects
   | - project1
   | - project2
   | - project3
@@ -39,7 +39,7 @@ To share the dependencies among the projects 1,2 and 3 we will have our `node_mo
 npm-shared init
 ```
 
-That will create a special  `node_modules` for us in `npmProjects` where the shared dependencies will be installed. Then, you can go to your projects folder and make the dependency installation like:
+That will create a special  `node_modules` folder for us in `npmProjects` where the shared dependencies will be installed. Then, you can go to your projects folder and make the dependency installation like:
 
 ```
 cd project1
@@ -48,7 +48,7 @@ npm-shared install
 
 That should install `project1` dependencies in `/npmProjects/node_modules`.
 
-Keep in mind that if the module is already installed in the shared modules folder...
+Keeping in mind that if the module is already installed in the shared modules folder...
 
 * If the version is compatible with the one that the project is trying to install, it won't be installed but reused.
 * If the version is not compatible, the module will be installed in the project's `node_modules` folder, avoiding the conflict with any project that already may be using the module in the shared folder.
@@ -56,7 +56,7 @@ Keep in mind that if the module is already installed in the shared modules folde
 ## Todo list
 The description above is the way I would like it to work, but the project is not at that point yet, this is the list of missing stuff:
 
-- [ ] Install modules in the shared folder using project's `package.json` file.
+- [x] Install modules in the shared folder using project's `package.json` file.
 - [ ] Install a module in the shared folder using module's name.
 - [ ] Update project's `package.json` when using `--save` `--save-dev` or `--save-optional` flags.
 - [ ] Avoid conflicts between versions of the same module.
