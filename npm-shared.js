@@ -4,6 +4,11 @@ var shell = require('shelljs');
 var yargs = require('yargs').argv;
 var fs = require('fs');
 var Path = require('path');
+var versionResolver = require('resolve-package-versions')({});
+var npmview = require('npmview');
+var semver  = require('semver');
+
+var npm = require('npm');
 
 
 var entry = parseEntry();
@@ -21,6 +26,12 @@ else if( entry.command === 'install' ){
     packageJson = projectPath && fs.readFileSync( Path.join( projectPath, package_json ) )
   ;
 
+  var config = packageJson && JSON.parse(packageJson) || {};
+
+  return npm.load( config, function( err, npm ){
+    console.log( npm );
+  });
+
   if( !entry.args.length ){
     if( !packageJson ){
       abort('No module name given to install and there is not a package.json file to install modules');
@@ -31,6 +42,18 @@ else if( entry.command === 'install' ){
     shell.exec('npm install', {cwd: path}, function(){
       fs.unlink( Path.join( path, package_json ) );
       console.log('Everything worked ok.');
+    });
+  }
+}
+else if( entry.command == 'check' ){
+  var path = findSharedPath( cwd ),
+    projectPath = findProjectPath( cwd ),
+    packageJson = projectPath && fs.readFileSync( Path.join( projectPath, package_json ) )
+  ;
+
+  if( packageJson ){
+    getInstallInfo( packageJson, info => {
+      console.log( info );
     });
   }
 }
@@ -139,4 +162,79 @@ function safeCopy( from, to ){
 function abort( reason ){
   console.error( 'ERR: ' + reason );
   process.exit(1);
+}
+
+function checkPackage( name, versionRange, clbk ){
+  var installedVersion = isInstalled( name );
+
+  npmview( name, (err, v, info) => {
+    var output = name + '@' + versionRange + ' - Installed: ' + (installedVersion || 'none') + '. ';
+    var maxVersion = semver.maxSatisfying( info.versions, versionRange );
+    var toInstall = true;
+    var location = 'shared';
+    if( installedVersion ){
+      if( semver.satisfies( installedVersion, versionRange ) ){
+        output += 'No need to update.';
+        toInstall = false;
+      }
+      else {
+        output += maxVersion + ' will be installed in the project folder.';
+        location = 'project';
+      }
+    }
+    else {
+      output += 'v' + maxVersion + ' will be installed in the shared folder.';
+    }
+    console.log( output );
+    console.log( 'Max version: ' + maxVersion );
+
+    clbk && clbk( toInstall ? {name: name, version: maxVersion, location: location} : false );
+  });
+  // console.log( command + ': ' + output.stdout, output.stderr );
+
+}
+
+function getInstallInfo( packageInfo, clbk ){
+  var dependencies = JSON.parse(packageJson).dependencies,
+    names = Object.keys( dependencies ),
+    allInfo = {project: [], shared: []},
+    handled = 0
+  ;
+
+  console.log( 'number of dependencies: ' + names.length );
+
+  names.forEach( name => {
+    checkPackage( name, dependencies[ name ], info => {
+
+      if( info ){
+        allInfo[info.location].push( info );
+      }
+
+      console.log( info, handled );
+
+      if( ++handled === names.length ){
+        clbk && clbk( allInfo );
+      }
+    });
+  });
+}
+
+function isInstalled( name ){
+  var modulePath = Path.join( findSharedPath( process.cwd() ), 'node_modules', name );
+  if( fs.existsSync( modulePath ) ){
+    var info = parsePackage( Path.join( modulePath, 'package.json' ) );
+    return info && info.version;
+  }
+  else {
+    return false;
+  }
+}
+
+function parsePackage( path ){
+  if( !fs.existsSync( path ) ){
+    return false;
+  }
+  else {
+    return JSON.parse( fs.readFileSync( path ) );
+  }
 }
